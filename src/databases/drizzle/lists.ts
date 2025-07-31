@@ -1,0 +1,19 @@
+export const ROLE_LIST = {
+	ADMIN: "ADMIN",
+	SUPERVISOR: "SUPERVISOR",
+	enumValues: ["ADMIN", "SUPERVISOR"]
+} as const;
+
+export const TOKEN_LIST = {
+	PASSWORD_RESET: "PASSWORD_RESET",
+	EMAIL_VERIFICATION: "EMAIL_VERIFICATION",
+	LOGIN_OTP: "LOGIN_OTP",
+	enumValues: ["PASSWORD_RESET", "EMAIL_VERIFICATION", "LOGIN_OTP"]
+} as const;
+
+export const STATUS_LIST = {
+	PUBLISHED: "PUBLISHED",
+	DRAFT: "DRAFT",
+	PENDING: "PENDING",
+	enumValues: ["PUBLISHED", "DRAFT", "PENDING"]
+} as const;
