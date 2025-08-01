@@ -17,6 +17,31 @@ export default class MediaService extends DrizzleService {
 
 	async upload(data: CloudinaryUploadResponse): Promise<ServiceApiResponse<boolean>> {
 		try {
+			// Extract file extension from original filename if format is not provided
+			const getFileExtension = (filename: string, format: string | undefined): string => {
+				if (format) return format;
+				const lastDotIndex = filename.lastIndexOf(".");
+				return lastDotIndex !== -1 ? filename.substring(lastDotIndex + 1) : "";
+			};
+
+			// Determine mime type properly
+			const getMimeType = (
+				resourceType: string,
+				format: string | undefined,
+				originalMimeType?: string
+			): string => {
+				if (originalMimeType) return originalMimeType;
+				if (format) return `${resourceType}/${format}`;
+				return "application/octet-stream"; // fallback
+			};
+
+			const fileExtension = getFileExtension(data.original_filename, data.format);
+			const mimeType = getMimeType(
+				data.resource_type,
+				data.format,
+				data.context?.custom?.mime_type
+			);
+
 			await this.getDb()
 				.insert(media)
 				.values({
@@ -24,13 +49,14 @@ export default class MediaService extends DrizzleService {
 					originalFilename: data.original_filename,
 					mediaType: data.resource_type,
 					fileSize: data.bytes,
-					fileExtension: data.format,
-					mimeType: `${data.resource_type}/${data.format}`,
+					fileExtension: fileExtension,
+					mimeType: mimeType,
 					storageKey: data.public_id,
 					height: data.height,
 					width: data.width,
 					secureUrl: data.secure_url,
-					storageMetadata: data
+					storageMetadata: data,
+					altText: data.original_filename || ""
 				});
 
 			return ServiceResponse.createResponse(StatusCodes.OK, "Media uploaded successfully", true);
@@ -41,7 +67,9 @@ export default class MediaService extends DrizzleService {
 
 	async retrieveAll(): Promise<ServiceApiResponse<MediaSchemaType[]>> {
 		try {
-			const mediaList = await this.getDb().query.media.findMany();
+			const mediaList = await this.getDb().query.media.findMany({
+				orderBy: (media, { desc }) => desc(media.createdAt)
+			});
 
 			return ServiceResponse.createResponse(
 				StatusCodes.OK,
@@ -53,9 +81,16 @@ export default class MediaService extends DrizzleService {
 		}
 	}
 
-	async updateMediaFileName(id: number, newFileName: string): Promise<ServiceApiResponse<boolean>> {
+	async updateMediaFileName(
+		id: number,
+		name: string,
+		altText?: string
+	): Promise<ServiceApiResponse<boolean>> {
 		try {
-			await this.getDb().update(media).set({ filename: newFileName }).where(eq(media.id, id));
+			await this.getDb()
+				.update(media)
+				.set({ originalFilename: name, altText })
+				.where(eq(media.id, id));
 
 			return ServiceResponse.createResponse(StatusCodes.OK, "Media file name updated", true);
 		} catch (error) {

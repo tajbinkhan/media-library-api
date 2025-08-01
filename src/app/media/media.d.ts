@@ -4,9 +4,9 @@ interface CloudinaryUploadResponse {
 	version: number;
 	version_id: string;
 	signature: string;
-	width: number;
-	height: number;
-	format: string;
+	width?: number;
+	height?: number;
+	format?: string;
 	resource_type: string;
 	created_at: string;
 	tags: string[];
@@ -20,4 +20,9 @@ interface CloudinaryUploadResponse {
 	display_name: string;
 	original_filename: string;
 	api_key: string;
+	context?: {
+		custom?: {
+			[key: string]: string;
+		};
+	};
 }

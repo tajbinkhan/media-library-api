@@ -255,9 +255,14 @@ export function initializeProcessHandlers(): void {
 		console.error(pc.red("Reason:"), reason);
 		console.error(pc.yellow("Promise:"), promise);
 
-		// Graceful shutdown
-		console.log(pc.yellow("🔄 Attempting graceful shutdown..."));
-		process.exit(1);
+		// Log error but don't shutdown - let the application continue running
+		console.log(pc.yellow("⚠️  Server continues running despite unhandled rejection"));
+
+		// Only exit if it's a critical system error
+		if ((reason && reason.code === "ECONNREFUSED") || reason?.message?.includes("FATAL")) {
+			console.log(pc.yellow("🔄 Critical error detected. Attempting graceful shutdown..."));
+			process.exit(1);
+		}
 	});
 
 	// Handle SIGTERM (graceful shutdown)

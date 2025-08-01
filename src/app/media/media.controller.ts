@@ -17,60 +17,107 @@ export default class MediaController extends ApiController {
 	}
 
 	async index(): Promise<Response> {
-		const mediaList = await this.mediaService.retrieveAll();
-		return this.apiResponse.sendResponse(mediaList);
+		try {
+			const mediaList = await this.mediaService.retrieveAll();
+			return this.apiResponse.sendResponse(mediaList);
+		} catch (error) {
+			console.error("Error in index controller:", error);
+			return this.apiResponse.internalServerError(
+				"Failed to retrieve media list due to an internal error."
+			);
+		}
 	}
 
 	async upload(): Promise<Response> {
-		const files = this.request.files as Express.Multer.File[];
+		try {
+			const files = this.request.files as Express.Multer.File[];
 
-		const uploadResult = await this.cloudinarySettings.multipleUpload(files);
+			// Validate files exist
+			if (!files || files.length === 0) {
+				return this.apiResponse.badResponse("No files provided for upload.");
+			}
 
-		const payload: CloudinaryUploadResponse = {
-			...uploadResult.data[0],
-			original_filename: files[0].originalname,
-			asset_id: uploadResult.data[0].asset_id,
-			version_id: uploadResult.data[0].version_id,
-			asset_folder: uploadResult.data[0].asset_folder,
-			display_name: uploadResult.data[0].display_name,
-			api_key: uploadResult.data[0].api_key
-		};
+			const uploadResult = await this.cloudinarySettings.multipleUpload(files);
 
-		const result = await this.mediaService.upload(payload);
+			// Check if upload was successful (status 200-299 range)
+			if (
+				uploadResult.status < 200 ||
+				uploadResult.status >= 300 ||
+				!uploadResult.data ||
+				uploadResult.data.length === 0
+			) {
+				return this.apiResponse.badResponse(
+					uploadResult.message || "Upload failed - no data returned"
+				);
+			}
 
-		return this.apiResponse.sendResponse(result);
+			const payload: CloudinaryUploadResponse = {
+				...uploadResult.data[0],
+				original_filename: files[0].originalname,
+				asset_id: uploadResult.data[0].asset_id,
+				version_id: uploadResult.data[0].version_id,
+				asset_folder: uploadResult.data[0].asset_folder,
+				display_name: uploadResult.data[0].display_name,
+				api_key: uploadResult.data[0].api_key
+			};
+
+			const result = await this.mediaService.upload(payload);
+
+			return this.apiResponse.sendResponse(result);
+		} catch (error) {
+			console.error("Error in upload controller:", error);
+			return this.apiResponse.internalServerError("Upload failed due to an internal error.");
+		}
 	}
 
 	async updateFileName(): Promise<Response> {
-		const { body, params } = this.request;
+		try {
+			const { body, params } = this.request;
 
-		const id = Number(params.id);
+			const id = Number(params.id);
 
-		if (isNaN(id)) {
-			return this.apiResponse.badResponse("Invalid media ID provided.");
-		}
+			if (isNaN(id)) {
+				return this.apiResponse.badResponse("Invalid media ID provided.");
+			}
 
-		const check = mediaNameSchema.safeParse(body);
-		if (!check.success) {
-			return this.apiResponse.badResponse(
-				check.error.issues.map(issue => issue.message).join(", ")
+			const check = mediaNameSchema.safeParse(body);
+			if (!check.success) {
+				return this.apiResponse.badResponse(
+					check.error.issues.map(issue => issue.message).join(", ")
+				);
+			}
+
+			const result = await this.mediaService.updateMediaFileName(
+				id,
+				check.data.name,
+				check.data.altText
+			);
+			return this.apiResponse.sendResponse(result);
+		} catch (error) {
+			console.error("Error in updateFileName controller:", error);
+			return this.apiResponse.internalServerError(
+				"Failed to update filename due to an internal error."
 			);
 		}
-
-		const result = await this.mediaService.updateMediaFileName(id, check.data.name);
-		return this.apiResponse.sendResponse(result);
 	}
 
 	async delete(): Promise<Response> {
-		const { params } = this.request;
+		try {
+			const { params } = this.request;
 
-		const id = Number(params.id);
+			const id = Number(params.id);
 
-		if (isNaN(id)) {
-			return this.apiResponse.badResponse("Invalid media ID provided.");
+			if (isNaN(id)) {
+				return this.apiResponse.badResponse("Invalid media ID provided.");
+			}
+
+			const result = await this.mediaService.deleteMedia(id);
+			return this.apiResponse.sendResponse(result);
+		} catch (error) {
+			console.error("Error in delete controller:", error);
+			return this.apiResponse.internalServerError(
+				"Failed to delete media due to an internal error."
+			);
 		}
-
-		const result = await this.mediaService.deleteMedia(id);
-		return this.apiResponse.sendResponse(result);
 	}
 }
