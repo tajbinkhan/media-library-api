@@ -54,5 +54,13 @@ export const mediaRouter: Router = (() => {
 			})
 		);
 
+	// Download media file
+	router.get(
+		"/:id/download",
+		asyncErrorHandler(async (req, res) => {
+			await new MediaController(req, res).download();
+		})
+	);
+
 	return router;
 })();

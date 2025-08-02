@@ -98,6 +98,26 @@ export default class MediaService extends DrizzleService {
 		}
 	}
 
+	async downloadMedia(id: number): Promise<ServiceApiResponse<MediaSchemaType>> {
+		try {
+			const mediaItem = await this.getDb().query.media.findFirst({
+				where: eq(media.id, id)
+			});
+
+			if (!mediaItem) {
+				return ServiceResponse.createRejectResponse(StatusCodes.NOT_FOUND, "Media item not found");
+			}
+
+			return ServiceResponse.createResponse(
+				StatusCodes.OK,
+				"Media information retrieved successfully",
+				mediaItem
+			);
+		} catch (error) {
+			return ServiceResponse.createErrorResponse(error);
+		}
+	}
+
 	async deleteMedia(id: number): Promise<ServiceApiResponse<boolean>> {
 		try {
 			const mediaItem = await this.getDb().query.media.findFirst({
