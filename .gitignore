@@ -154,4 +154,7 @@ uploads
 # Workspace Storage
 pnpm-workspace.yaml
 
+# Docker
+pgdata
+
 # End of https://www.toptal.com/developers/gitignore/api/node
