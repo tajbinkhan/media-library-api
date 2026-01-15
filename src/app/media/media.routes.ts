@@ -42,7 +42,7 @@ export const mediaRouter: Router = (() => {
 	);
 
 	router
-		.route("/:id")
+		.route("/:publicId")
 		.put(
 			asyncErrorHandler(async (req, res) => {
 				await new MediaController(req, res).updateFileName();
@@ -56,7 +56,7 @@ export const mediaRouter: Router = (() => {
 
 	// Download media file
 	router.get(
-		"/:id/download",
+		"/:publicId/download",
 		asyncErrorHandler(async (req, res) => {
 			await new MediaController(req, res).download();
 		})

@@ -82,7 +82,7 @@ export default class MediaService extends DrizzleService {
 	}
 
 	async updateMediaFileName(
-		id: number,
+		publicId: string,
 		name: string,
 		altText?: string
 	): Promise<ServiceApiResponse<boolean>> {
@@ -90,7 +90,7 @@ export default class MediaService extends DrizzleService {
 			await this.getDb()
 				.update(media)
 				.set({ originalFilename: name, altText })
-				.where(eq(media.id, id));
+				.where(eq(media.publicId, publicId));
 
 			return ServiceResponse.createResponse(StatusCodes.OK, "Media file name updated", true);
 		} catch (error) {
@@ -98,10 +98,10 @@ export default class MediaService extends DrizzleService {
 		}
 	}
 
-	async downloadMedia(id: number): Promise<ServiceApiResponse<MediaSchemaType>> {
+	async downloadMedia(publicId: string): Promise<ServiceApiResponse<MediaSchemaType>> {
 		try {
 			const mediaItem = await this.getDb().query.media.findFirst({
-				where: eq(media.id, id)
+				where: eq(media.publicId, publicId)
 			});
 
 			if (!mediaItem) {
@@ -118,10 +118,10 @@ export default class MediaService extends DrizzleService {
 		}
 	}
 
-	async deleteMedia(id: number): Promise<ServiceApiResponse<boolean>> {
+	async deleteMedia(publicId: string): Promise<ServiceApiResponse<boolean>> {
 		try {
 			const mediaItem = await this.getDb().query.media.findFirst({
-				where: eq(media.id, id)
+				where: eq(media.publicId, publicId)
 			});
 
 			if (!mediaItem) {
@@ -130,7 +130,7 @@ export default class MediaService extends DrizzleService {
 
 			await this.cloudinarySettings.deleteFile(mediaItem.storageKey);
 
-			await this.getDb().delete(media).where(eq(media.id, id));
+			await this.getDb().delete(media).where(eq(media.publicId, publicId));
 
 			return ServiceResponse.createResponse(StatusCodes.OK, "Media deleted successfully", true);
 		} catch (error) {

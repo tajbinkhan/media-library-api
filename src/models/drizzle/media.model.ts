@@ -6,6 +6,7 @@ import {
 	pgTable,
 	serial,
 	text,
+	uuid,
 	varchar
 } from "drizzle-orm/pg-core";
 
@@ -13,6 +14,7 @@ import { timestamps } from "@/databases/drizzle/helpers";
 
 export const media = pgTable("media", {
 	id: serial("id").primaryKey(),
+	publicId: uuid("public_id").defaultRandom().notNull().unique(),
 
 	// File identification
 	filename: varchar("filename", { length: 255 }).notNull(),

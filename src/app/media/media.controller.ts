@@ -62,10 +62,10 @@ export default class MediaController extends ApiController {
 	async updateFileName(): Promise<Response> {
 		const { body, params } = this.request;
 
-		const id = Number(params.id);
+		const publicId = params.publicId;
 
-		if (isNaN(id)) {
-			return this.apiResponse.badResponse("Invalid media ID provided.");
+		if (!publicId) {
+			return this.apiResponse.badResponse("Invalid media public ID provided.");
 		}
 
 		const check = mediaNameSchema.safeParse(body);
@@ -76,7 +76,7 @@ export default class MediaController extends ApiController {
 		}
 
 		const result = await this.mediaService.updateMediaFileName(
-			id,
+			publicId,
 			check.data.name,
 			check.data.altText
 		);
@@ -86,13 +86,13 @@ export default class MediaController extends ApiController {
 	async download(): Promise<Response> {
 		const { params, query } = this.request;
 
-		const id = Number(params.id);
+		const publicId = params.publicId;
 
-		if (isNaN(id)) {
-			return this.apiResponse.badResponse("Invalid media ID provided.");
+		if (!publicId) {
+			return this.apiResponse.badResponse("Invalid media public ID provided.");
 		}
 
-		const result = await this.mediaService.downloadMedia(id);
+		const result = await this.mediaService.downloadMedia(publicId);
 
 		const mediaItem = result.data;
 
@@ -140,13 +140,13 @@ export default class MediaController extends ApiController {
 	async delete(): Promise<Response> {
 		const { params } = this.request;
 
-		const id = Number(params.id);
+		const publicId = params.publicId;
 
-		if (isNaN(id)) {
-			return this.apiResponse.badResponse("Invalid media ID provided.");
+		if (!publicId) {
+			return this.apiResponse.badResponse("Invalid media public ID provided.");
 		}
 
-		const result = await this.mediaService.deleteMedia(id);
+		const result = await this.mediaService.deleteMedia(publicId);
 		return this.apiResponse.sendResponse(result);
 	}
 }
