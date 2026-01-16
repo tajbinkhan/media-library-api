@@ -1,152 +1,128 @@
-import type { Request, Response } from "express";
-import { StatusCodes } from "http-status-codes";
+import {
+	BadRequestException,
+	Body,
+	Controller,
+	Delete,
+	Get,
+	HttpStatus,
+	Param,
+	ParseUUIDPipe,
+	Post,
+	Put,
+	Req,
+	UploadedFile,
+	UseGuards,
+	UseInterceptors,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Request } from 'express';
+import { memoryStorage } from 'multer';
+import { ApiResponse, createApiResponse } from '../../core/api-response.interceptor';
+import { CloudinaryImageService } from '../../core/cloudinary/upload';
+import { EnvType } from '../../core/env';
+import { JwtAuthGuard } from '../auth/auth.guard';
+import { MediaDataType, MediaResponseType } from './@types/media.types';
+import { FILE_SIZE_LIMIT, singleFileSchema, ZodFileValidationPipe } from './media.pipe';
+import { type MediaDto, mediaSchema } from './media.schema';
+import { MediaService } from './media.service';
 
-import MediaService from "@/app/media/media.service";
-import { CloudinarySettings } from "@/app/media/media.settings";
-import { mediaNameSchema } from "@/app/media/media.validators";
+@Controller('media')
+export class MediaController {
+	private readonly cloudinaryImageService: CloudinaryImageService;
 
-import { ApiController } from "@/core/controller";
-
-export default class MediaController extends ApiController {
-	protected readonly cloudinarySettings: CloudinarySettings;
-	protected readonly mediaService: MediaService;
-
-	constructor(request: Request, response: Response) {
-		super(request, response);
-		this.cloudinarySettings = new CloudinarySettings();
-		this.mediaService = new MediaService();
+	constructor(
+		private readonly mediaService: MediaService,
+		private configService: ConfigService<EnvType, true>,
+	) {
+		this.cloudinaryImageService = new CloudinaryImageService({
+			cloudName: this.configService.get('CLOUDINARY_CLOUD_NAME'),
+			apiKey: this.configService.get('CLOUDINARY_API_KEY'),
+			apiSecret: this.configService.get('CLOUDINARY_API_SECRET'),
+			folder: 'test-media-upload',
+		});
 	}
 
-	async index(): Promise<Response> {
-		const mediaList = await this.mediaService.retrieveAll();
-		return this.apiResponse.sendResponse(mediaList);
-	}
+	@UseGuards(JwtAuthGuard)
+	@Post('/')
+	@UseInterceptors(
+		FileInterceptor('file', {
+			storage: memoryStorage(),
+			// Multer-level hard limit (fast fail before Zod, still validate in Zod too)
+			limits: { fileSize: FILE_SIZE_LIMIT },
+		}),
+	)
+	async uploadMedia(
+		@UploadedFile(new ZodFileValidationPipe(singleFileSchema))
+		file: Express.Multer.File,
+		@Req() request: Request,
+	): Promise<ApiResponse<boolean>> {
+		await this.mediaService.restrictMediaUpload(Number(request.user?.id));
+		const result = await this.cloudinaryImageService.uploadFromBuffer(file.buffer);
 
-	async upload(): Promise<Response> {
-		const files = this.request.files as Express.Multer.File[];
-
-		// Validate files exist
-		if (!files || files.length === 0) {
-			return this.apiResponse.badResponse("No files provided for upload.");
-		}
-
-		const uploadResult = await this.cloudinarySettings.multipleUpload(files);
-
-		// Check if upload was successful (status 200-299 range)
-		if (
-			uploadResult.status < 200 ||
-			uploadResult.status >= 300 ||
-			!uploadResult.data ||
-			uploadResult.data.length === 0
-		) {
-			return this.apiResponse.badResponse(
-				uploadResult.message || "Upload failed - no data returned"
-			);
-		}
-
-		const payload: CloudinaryUploadResponse = {
-			...uploadResult.data[0],
-			original_filename: files[0].originalname,
-			asset_id: uploadResult.data[0].asset_id,
-			version_id: uploadResult.data[0].version_id,
-			asset_folder: uploadResult.data[0].asset_folder,
-			display_name: uploadResult.data[0].display_name,
-			api_key: uploadResult.data[0].api_key
+		const data: MediaDataType = {
+			altText: null,
+			secureUrl: result.data!.secure_url,
+			filename: file.originalname,
+			mimeType: file.mimetype,
+			fileExtension: file.originalname.split('.').pop() || '',
+			fileSize: file.size,
+			storageKey: result.data!.public_id,
+			mediaType: file.mimetype.startsWith('image/') ? 'image' : 'other',
+			storageMetadata: result.data!,
+			uploadedBy: Number(request.user?.id),
+			caption: null,
+			description: null,
+			tags: result.data!.tags || [],
+			duration: result.data!.duration || null,
+			width: result.data!.width || null,
+			height: result.data!.height || null,
 		};
 
-		const result = await this.mediaService.upload(payload);
+		const response = await this.mediaService.uploadMedia(data);
 
-		return this.apiResponse.sendResponse(result);
+		return createApiResponse(HttpStatus.OK, 'Media uploaded successfully', response);
 	}
 
-	async updateFileName(): Promise<Response> {
-		const { body, params } = this.request;
+	@UseGuards(JwtAuthGuard)
+	@Get('/')
+	async getAllMedia(@Req() request: Request): Promise<ApiResponse<MediaResponseType[]>> {
+		const mediaItems = await this.mediaService.getAllMedia(Number(request.user?.id));
 
-		const publicId = params.publicId;
-
-		if (!publicId) {
-			return this.apiResponse.badResponse("Invalid media public ID provided.");
-		}
-
-		const check = mediaNameSchema.safeParse(body);
-		if (!check.success) {
-			return this.apiResponse.badResponse(
-				check.error.issues.map(issue => issue.message).join(", ")
-			);
-		}
-
-		const result = await this.mediaService.updateMediaFileName(
-			publicId,
-			check.data.name,
-			check.data.altText
-		);
-		return this.apiResponse.sendResponse(result);
+		return createApiResponse(HttpStatus.OK, 'Media fetched successfully', mediaItems);
 	}
 
-	async download(): Promise<Response> {
-		const { params, query } = this.request;
+	@UseGuards(JwtAuthGuard)
+	@Put('/:id')
+	async updateMedia(
+		@Req() request: Request,
+		@Body() body: MediaDto,
+		@Param('id', ParseUUIDPipe) id: string,
+	): Promise<ApiResponse<boolean>> {
+		const userId = Number(request.user?.id);
 
-		const publicId = params.publicId;
-
-		if (!publicId) {
-			return this.apiResponse.badResponse("Invalid media public ID provided.");
+		const validate = mediaSchema.safeParse(body);
+		if (!validate.success) {
+			throw new BadRequestException(validate.error.issues.map(issue => issue.message).join(', '));
 		}
 
-		const result = await this.mediaService.downloadMedia(publicId);
+		const response = await this.mediaService.updateMediaData(userId, id, validate.data);
 
-		const mediaItem = result.data;
-
-		// Ensure secureUrl exists
-		if (!mediaItem.secureUrl) {
-			return this.apiResponse.internalServerError("Media URL not available");
-		}
-
-		// Set appropriate headers for file download
-		this.response.setHeader("Content-Type", mediaItem.mimeType);
-		this.response.setHeader(
-			"Content-Disposition",
-			`attachment; filename="${mediaItem.originalFilename}"`
-		);
-
-		// If the media has file size information, set Content-Length
-		if (mediaItem.fileSize) {
-			this.response.setHeader("Content-Length", mediaItem.fileSize.toString());
-		}
-
-		// Add cache headers for better performance
-		this.response.setHeader("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
-		this.response.setHeader("ETag", `"${mediaItem.id}-${mediaItem.updatedAt}"`);
-
-		// Check if user wants to stream through server for better access control
-		// Default behavior is to redirect for better performance
-		const streamThroughServer = query.stream === "true";
-
-		if (streamThroughServer) {
-			// Note: Streaming through server provides better access control but uses more server resources
-			// For production use, consider implementing proper streaming with progress tracking
-			return this.apiResponse.sendResponse({
-				status: StatusCodes.OK,
-				message: "Streaming not implemented in this version. Use direct download.",
-				data: { downloadUrl: mediaItem.secureUrl }
-			});
-		} else {
-			// Redirect directly to Cloudinary (more efficient, less server load)
-			// This is the recommended approach for most use cases
-			this.response.redirect(StatusCodes.TEMPORARY_REDIRECT, mediaItem.secureUrl);
-			return this.response;
-		}
+		return createApiResponse(HttpStatus.OK, 'Media updated successfully', response);
 	}
 
-	async delete(): Promise<Response> {
-		const { params } = this.request;
+	@UseGuards(JwtAuthGuard)
+	@Delete('/:id')
+	async deleteMedia(
+		@Req() request: Request,
+		@Param('id', ParseUUIDPipe) id: string,
+	): Promise<ApiResponse<boolean>> {
+		const userId = Number(request.user?.id);
 
-		const publicId = params.publicId;
+		const response = await this.mediaService.deleteMedia(userId, id);
 
-		if (!publicId) {
-			return this.apiResponse.badResponse("Invalid media public ID provided.");
-		}
+		await this.cloudinaryImageService.deleteMedia(response.storageKey);
 
-		const result = await this.mediaService.deleteMedia(publicId);
-		return this.apiResponse.sendResponse(result);
+		return createApiResponse(HttpStatus.OK, 'Media deleted successfully', true);
 	}
 }

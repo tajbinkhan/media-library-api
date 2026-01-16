@@ -1,11 +1,12 @@
 {
 	"arrowParens": "avoid",
 	"tabWidth": 2,
-	"trailingComma": "none",
 	"semi": true,
 	"proseWrap": "always",
 	"printWidth": 100,
 	"useTabs": true,
+	"singleQuote": true,
+	"trailingComma": "all",
 	"importOrder": [
 		"<THIRD_PARTY_MODULES>",
 		"^@/lib/(.*)$",
@@ -15,5 +16,13 @@
 	],
 	"importOrderSeparation": true,
 	"importOrderSortSpecifiers": true,
-	"plugins": ["@trivago/prettier-plugin-sort-imports"]
+	"plugins": ["@trivago/prettier-plugin-sort-imports"],
+	"overrides": [
+		{
+			"files": ["*.ts"],
+			"options": {
+				"parser": "babel-ts"
+			}
+		}
+	]
 }

@@ -1,4 +1,4 @@
-import type { Pagination } from "@/utils/serviceApi";
+import { Pagination } from './api-response.interceptor';
 
 export default class PaginationManager {
 	page: number;
@@ -19,18 +19,18 @@ export default class PaginationManager {
 			conditionalPage = totalPages;
 		}
 
-		const offset = (conditionalPage! - 1) * this.limit!;
+		const offset = (conditionalPage - 1) * this.limit;
 
 		const pagination: Pagination = {
 			totalItems: this.totalItems,
 			limit: this.limit,
 			offset,
-			currentPage: conditionalPage!,
+			currentPage: conditionalPage,
 			totalPages,
-			hasPrevPage: conditionalPage! > 1,
-			hasNextPage: conditionalPage! < totalPages,
-			prevPage: conditionalPage! > 1 ? conditionalPage! - 1 : null,
-			nextPage: conditionalPage! < totalPages ? conditionalPage! + 1 : null
+			hasPrevPage: conditionalPage > 1,
+			hasNextPage: conditionalPage < totalPages,
+			prevPage: conditionalPage > 1 ? conditionalPage - 1 : null,
+			nextPage: conditionalPage < totalPages ? conditionalPage + 1 : null,
 		};
 
 		return { pagination, offset };

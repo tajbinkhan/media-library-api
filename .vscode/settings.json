@@ -14,6 +14,7 @@
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
 	"javascript.validate.enable": false, //disable all built-in syntax checking
+	// "typescript.preferences.preferTypeOnlyAutoImports": true,
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": "explicit",
 		"source.fixAll.tslint": "explicit",
@@ -32,8 +33,9 @@
 		"**/Thumbs.db": true,
 		"**/CVS": true,
 		"node_modules": true,
-		".vscode": true
+		".vscode": false
 	},
 	"explorerExclude.backup": {},
-	"cSpell.words": ["Homevest"]
+	"cSpell.words": ["Brevo", "Homevest"],
+	"typescript.preferences.importModuleSpecifier": "relative"
 }
