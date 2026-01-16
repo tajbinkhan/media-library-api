@@ -211,6 +211,7 @@ export class AuthController {
 		const responseUser: UserWithoutPasswordResponse = {
 			...user,
 			id: user.publicId,
+			imageInformation: null,
 		};
 
 		// Redirect to custom URL or return JSON response
