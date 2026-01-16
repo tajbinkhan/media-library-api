@@ -1,115 +1,219 @@
 # Media Library API
 
-A full-stack, modular, and scalable media library API for healthcare applications. Built with
-Node.js, Express, TypeScript, Drizzle ORM, and PostgreSQL. Includes authentication, session
-management, media handling, and robust validation.
+A secure and scalable media management backend API built with NestJS, PostgreSQL, Drizzle ORM, and
+Cloudinary.
+
+## Description
+
+This is the backend API for a media library system, featuring secure authentication, media upload
+and management via Cloudinary, CSRF protection, and comprehensive user management. Built with modern
+technologies and best practices for production-ready applications.
 
 ## Features
 
-- Modular architecture (authentication, media, core, etc.)
-- RESTful API endpoints (see `src/routes/`)
-- Authentication (local, Google OAuth)
-- Session and CSRF protection
-- Rate limiting and error handling
-- Media upload and management (Cloudinary integration)
-- Database migrations and seeding (Drizzle ORM)
-- Environment validation (Zod)
-- TypeScript, ESLint, Prettier
+- 📁 **Media Management** - Upload, retrieve, update, and delete media files
+- ☁️ **Cloudinary Integration** - Cloud-based image and video storage with optimization
+- 🔐 **Secure Authentication** - JWT-based authentication with session management
+- 🛡️ **CSRF Protection** - Built-in CSRF token validation
+- 🔑 **OAuth Integration** - Google OAuth 2.0 authentication support
+- 📊 **Database ORM** - Drizzle ORM for type-safe database queries
+- 🐘 **PostgreSQL** - Robust relational database with Docker support
+- 🔒 **Password Encryption** - Bcrypt password hashing
+- 🌐 **API Response Standardization** - Consistent response format across all endpoints
+- 📝 **Request Logging** - Comprehensive request/response logging
+- 🎯 **Device Tracking** - User agent and device information tracking
 
-## Getting Started
+## Tech Stack
 
-### Prerequisites
+- **Framework:** NestJS
+- **Language:** TypeScript
+- **Database:** PostgreSQL
+- **ORM:** Drizzle ORM
+- **Authentication:** Passport.js (JWT & Google OAuth)
+- **Security:** CSRF-CSRF, bcryptjs
+- **Package Manager:** pnpm
 
-- Node.js >= 20.0.0
-- PostgreSQL database
-- Cloudinary account (for media uploads)
+## Prerequisites
 
-### Installation
+- Node.js (v18 or higher)
+- pnpm
+- Docker (for PostgreSQL)
 
-```sh
+## Project Setup
+
+1. **Install dependencies:**
+
+```bash
 pnpm install
 ```
 
-### Environment Setup
+2. **Configure environment variables:** Create a `.env` file in the root directory with the
+   following variables:
 
-Create a `.env` file with the following variables:
-
-```
-DATABASE_URL=your_postgres_url
-PORT=3000
-SECRET=your_session_secret
+```env
+# Application
 NODE_ENV=development
-SESSION_COOKIE_NAME=session
-ORIGIN_URL=http://localhost:3000
-COOKIE_SETTINGS=locally
+PORT=8080
 COOKIE_DOMAIN=localhost
-COOKIE_SAME_SITE=lax
-OTP_RESET_EXPIRY=600
-SHOW_OTP=true
-API_URL=http://localhost:3000/api
+ORIGIN_URL=http://localhost:3000
+API_URL=http://localhost:8080
+APP_URL=http://localhost:3000
+
+# Database
+DATABASE_URL="postgresql://media_library:media_library@localhost:5666/media_library?schema=public"
+
+# Security Secrets
+AUTH_SECRET=your_auth_secret_here
+CSRF_SECRET=your_csrf_secret_here
+CRYPTO_SECRET=your_crypto_secret_here
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:8080/auth/google/callback
+
+# Cloudinary Configuration
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+
+# Postgres Docker Configuration
+POSTGRES_USER=media_library
+POSTGRES_PASSWORD=media_library
+POSTGRES_DB=media_library
 ```
 
-### Database Setup
+3. **Start PostgreSQL with Docker:**
 
-- Run migrations:
-  ```sh
-  pnpm run db:migrate
-  ```
-- Seed database:
-  ```sh
-  pnpm run db:seed
-  ```
-
-### Development
-
-```sh
-pnpm run dev
+```bash
+docker-compose up -d
 ```
 
-### Build
+4. **Generate and run database migrations:**
 
-```sh
-pnpm run build
+```bash
+# Generate migration files
+pnpm db:generate
+
+# Push schema changes to database
+pnpm db:push
 ```
 
-### Start
+## Running the Application
 
-```sh
+```bash
+# Development mode with watch
+pnpm dev
+
+# Standard development mode
 pnpm start
+
+# Production mode
+pnpm prod
+```
+
+The API will be available at `http://localhost:8080` (or your configured PORT).
+
+## Database Management
+
+```bash
+# Open Drizzle Studio (database GUI)
+pnpm db:studio
+
+# Generate new migrations
+pnpm db:generate
+
+# Run migrations
+pnpm db:migrate
+
+# Push schema changes directly
+pnpm db:push
+
+# Clear database
+pnpm db:clear
+```
+
+## Code Quality
+
+```bash
+# Format code
+pnpm format
+
+# Lint code
+pnpm lint
+
+# Build for production
+pnpm build
+```
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── auth/                 # Authentication module
+│   │   ├── strategies/       # Passport strategies (JWT, Google)
+│   │   ├── auth.service.ts   # Authentication logic
+│   │   ├── auth.controller.ts
+│   │   └── auth.guard.ts
+│   └── media/                # Media management module
+│       ├── media.controller.ts
+│       ├── media.service.ts
+│       ├── media.schema.ts
+│       └── media.pipe.ts
+├── core/                     # Core utilities
+│   ├── cloudinary/          # Cloudinary integration
+│   ├── crypto/              # Encryption services
+│   ├── validators/          # Schema validators
+│   └── constants.ts
+├── csrf/                    # CSRF protection module
+├── database/                # Database configuration
+│   ├── schema.ts           # Database schema
+│   └── connection.ts
+└── models/
+    └── drizzle/            # Drizzle ORM models
 ```
 
 ## API Endpoints
 
-- All routes are prefixed with `/api`
-- See `src/routes/app.routes.ts` and feature folders for details
+### Authentication
 
-## Scripts
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - Login with credentials
+- `GET /auth/google` - Initiate Google OAuth
+- `GET /auth/google/callback` - Google OAuth callback
+- `POST /auth/logout` - Logout user
+- `GET /auth/profile` - Get user profile
 
-- `dev`: Start development server with hot reload
-- `build`: Type-check, lint, and build
-- `start`: Run production build
-- `db:migrate`, `db:seed`, etc.: Database management
-- `format`, `lint`: Code quality tools
+### Media Management
 
-## Folder Structure
+- `POST /media` - Upload media file (protected)
+- `GET /media` - Get all user's media (protected)
+- `PUT /media/:id` - Update media metadata (protected)
+- `DELETE /media/:id` - Delete media file (protected)
 
-- `src/app/`: Feature modules (authentication, media)
-- `src/core/`: Core utilities and config
-- `src/databases/drizzle/`: Database setup and schema
-- `src/routes/`: API route definitions
-- `src/seed/`: Database seeders
-- `src/service/`: Service layer
-- `src/settings/`: App settings and middleware
-- `src/utils/`: Utility functions
-- `src/validators/`: Validation schemas
+### CSRF
+
+- `GET /csrf` - Get CSRF token
+
+## Security Features
+
+- JWT token-based authentication
+- HTTP-only cookies for token storage
+- CSRF token validation on state-changing requests
+- Password hashing with bcrypt
+- Session management with device tracking
+- IP address and user agent logging
+- Secure media upload with file validation
+- Cloud-based storage via Cloudinary with access control
+
+## Documentation
+
+For additional documentation, see:
+
+- [CSRF Implementation](docs/CSRF_IMPLEMENTATION.md)
+- [Testing Removal Guide](docs/REMOVE_TESTING.md)
 
 ## License
 
-UNLICENSED
-
----
-
-For more details, see the source code and comments in each module.
+UNLICENSED - Private project

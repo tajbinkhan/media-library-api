@@ -1,7 +1,7 @@
 export const zodMessages = {
 	error: {
 		required: {
-			fieldIsRequired: (field: string) => `${field} is required.`
+			fieldIsRequired: (field: string) => `${field} is required.`,
 		},
 		limit: {
 			stringMin: (field: string, limit: number) => `${field} must be at least ${limit} characters.`,
@@ -11,9 +11,11 @@ export const zodMessages = {
 			numberMin: (field: string, limit: number) => `${field} must be at least ${limit}.`,
 			numberMax: (field: string, limit: number) => `${field} must not exceed ${limit}.`,
 			fileSize: (field: string, limit: string) => `${field} must not exceed ${limit}.`,
-			length: (field: string, limit: number) => `${field} must be exactly ${limit} characters long.`
+			length: (field: string, limit: number) =>
+				`${field} must be exactly ${limit} characters long.`,
 		},
 		invalid: {
+			invalidUrl: (field: string) => `${field} must be a valid URL.`,
 			invalidString: (field: string) => `${field} must be a string.`,
 			invalidEmail: (field: string) => `${field} must be a valid email address.`,
 			invalidNumber: (field: string) => `${field} must be a number.`,
@@ -22,7 +24,7 @@ export const zodMessages = {
 			invalidArray: (field: string) => `${field} must be an array.`,
 			invalidObject: (field: string) => `${field} must be an object.`,
 			invalidEnum: (field: string, values: readonly string[]) =>
-				`${field} must be one of the following values: ${values.join(", ")}.`,
+				`${field} must be one of the following values: ${values.join(', ')}.`,
 			invalidUnion: (field: string) => `${field} must be one of the specified types.`,
 			invalidIntersection: (field: string) =>
 				`${field} must be a combination of the specified types.`,
@@ -52,7 +54,11 @@ export const zodMessages = {
 			invalidUsername: (field: string) =>
 				`${field} must contain only letters, numbers, and underscores.`,
 			invalidUsernameOrEmail: (field: string) =>
-				`${field} must be a valid username or email address.`
-		}
-	}
+				`${field} must be a valid username or email address.`,
+			invalidLength: (field: string, length: number) =>
+				`${field} must be exactly ${length} characters long.`,
+			invalidObjectId: (field: string) => `${field} must be a valid ObjectId.`,
+			invalidUUID: (field: string) => `${field} must be a valid UUID.`,
+		},
+	},
 };
