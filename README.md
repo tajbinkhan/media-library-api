@@ -1,10 +1,13 @@
 # Media Library API
 
-A secure and scalable media management backend API built with NestJS, PostgreSQL, Drizzle ORM, and Cloudinary.
+A secure and scalable media management backend API built with NestJS, PostgreSQL, Drizzle ORM, and
+Cloudinary.
 
 ## Description
 
-This is the backend API for a media library system, featuring secure authentication, media upload and management via Cloudinary, CSRF protection, and comprehensive user management. Built with modern technologies and best practices for production-ready applications.
+This is the backend API for a media library system, featuring secure authentication, media upload
+and management via Cloudinary, CSRF protection, and comprehensive user management. Built with modern
+technologies and best practices for production-ready applications.
 
 ## Features
 
