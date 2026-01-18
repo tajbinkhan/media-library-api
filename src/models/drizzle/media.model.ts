@@ -44,9 +44,7 @@ export const media = pgTable('media', {
 	storageMetadata: json('storage_metadata'), // Provider-specific data (transformations, ACL, etc.)
 
 	// Author information
-	uploadedBy: integer('uploaded_by')
-		.notNull()
-		.references(() => users.id, { onDelete: 'cascade' }),
+	uploadedBy: integer('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
 
 	// Timestamps
 	...timestamps,
