@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { ApiResponseInterceptor } from './core/api-response.interceptor';
@@ -7,8 +7,6 @@ import { EnvType } from './core/env';
 import { HttpExceptionFilter } from './core/http-exception.filter';
 import { appLogger, displayStartupInfo } from './core/logger';
 import { logAllRoutes } from './core/route-logger';
-import { CsrfGuard } from './csrf/csrf.guard';
-import { CsrfService } from './csrf/csrf.service';
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
@@ -50,9 +48,9 @@ async function bootstrap() {
 	app.useGlobalInterceptors(new ApiResponseInterceptor());
 
 	// Apply CSRF guard globally
-	const reflector = app.get(Reflector);
-	const csrfService = app.get(CsrfService);
-	app.useGlobalGuards(new CsrfGuard(csrfService, reflector));
+	// const reflector = app.get(Reflector);
+	// const csrfService = app.get(CsrfService);
+	// app.useGlobalGuards(new CsrfGuard(csrfService, reflector));
 
 	// Initialize and start the server
 	await app.init();

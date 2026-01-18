@@ -11,7 +11,6 @@ import {
 	Put,
 	Req,
 	UploadedFile,
-	UseGuards,
 	UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -21,7 +20,6 @@ import { memoryStorage } from 'multer';
 import { ApiResponse, createApiResponse } from '../../core/api-response.interceptor';
 import { CloudinaryImageService } from '../../core/cloudinary/upload';
 import { EnvType } from '../../core/env';
-import { JwtAuthGuard } from '../auth/auth.guard';
 import { MediaDataType, MediaResponseType } from './@types/media.types';
 import { FILE_SIZE_LIMIT, singleFileSchema, ZodFileValidationPipe } from './media.pipe';
 import { type MediaDto, mediaSchema } from './media.schema';
@@ -43,7 +41,7 @@ export class MediaController {
 		});
 	}
 
-	@UseGuards(JwtAuthGuard)
+	// @UseGuards(JwtAuthGuard)
 	@Post('/')
 	@UseInterceptors(
 		FileInterceptor('file', {
@@ -57,7 +55,7 @@ export class MediaController {
 		file: Express.Multer.File,
 		@Req() request: Request,
 	): Promise<ApiResponse<boolean>> {
-		await this.mediaService.restrictMediaUpload(Number(request.user?.id));
+		// await this.mediaService.restrictMediaUpload(Number(request.user?.id));
 		const result = await this.cloudinaryImageService.uploadFromBuffer(file.buffer);
 
 		const data: MediaDataType = {
@@ -70,7 +68,7 @@ export class MediaController {
 			storageKey: result.data!.public_id,
 			mediaType: file.mimetype.startsWith('image/') ? 'image' : 'other',
 			storageMetadata: result.data!,
-			uploadedBy: Number(request.user?.id),
+			uploadedBy: request.user?.id ? Number(request.user.id) : null,
 			caption: null,
 			description: null,
 			tags: result.data!.tags || [],
@@ -84,7 +82,7 @@ export class MediaController {
 		return createApiResponse(HttpStatus.OK, 'Media uploaded successfully', response);
 	}
 
-	@UseGuards(JwtAuthGuard)
+	// @UseGuards(JwtAuthGuard)
 	@Get('/')
 	async getAllMedia(@Req() request: Request): Promise<ApiResponse<MediaResponseType[]>> {
 		const mediaItems = await this.mediaService.getAllMedia(Number(request.user?.id));
@@ -92,7 +90,7 @@ export class MediaController {
 		return createApiResponse(HttpStatus.OK, 'Media fetched successfully', mediaItems);
 	}
 
-	@UseGuards(JwtAuthGuard)
+	// @UseGuards(JwtAuthGuard)
 	@Put('/:id')
 	async updateMedia(
 		@Req() request: Request,
@@ -106,12 +104,12 @@ export class MediaController {
 			throw new BadRequestException(validate.error.issues.map(issue => issue.message).join(', '));
 		}
 
-		const response = await this.mediaService.updateMediaData(userId, id, validate.data);
+		const response = await this.mediaService.updateMediaData(id, validate.data, userId);
 
 		return createApiResponse(HttpStatus.OK, 'Media updated successfully', response);
 	}
 
-	@UseGuards(JwtAuthGuard)
+	// @UseGuards(JwtAuthGuard)
 	@Delete('/:id')
 	async deleteMedia(
 		@Req() request: Request,
@@ -119,7 +117,7 @@ export class MediaController {
 	): Promise<ApiResponse<boolean>> {
 		const userId = Number(request.user?.id);
 
-		const response = await this.mediaService.deleteMedia(userId, id);
+		const response = await this.mediaService.deleteMedia(id, userId);
 
 		await this.cloudinaryImageService.deleteMedia(response.storageKey);
 

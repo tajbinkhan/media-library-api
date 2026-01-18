@@ -33,7 +33,7 @@ export class MediaService extends DrizzleService {
 		return !!createdMedia;
 	}
 
-	async getAllMedia(userId: number): Promise<MediaResponseType[]> {
+	async getAllMedia(userId?: number): Promise<MediaResponseType[]> {
 		const mediaItems = await this.getDb()
 			.select({
 				publicId: schema.media.publicId,
@@ -50,7 +50,7 @@ export class MediaService extends DrizzleService {
 				updatedAt: schema.media.updatedAt,
 			})
 			.from(schema.media)
-			.where(eq(schema.media.uploadedBy, userId))
+			.where(userId ? eq(schema.media.uploadedBy, userId) : undefined)
 			.orderBy(schema.media.createdAt);
 
 		return mediaItems;
@@ -81,14 +81,19 @@ export class MediaService extends DrizzleService {
 		return mediaItem;
 	}
 
-	async updateMediaData(userId: number, publicId: string, data: MediaDto): Promise<boolean> {
+	async updateMediaData(publicId: string, data: MediaDto, userId?: number): Promise<boolean> {
 		const updatedMedia = await this.getDb()
 			.update(schema.media)
 			.set({
 				altText: data.altText,
 				filename: data.name,
 			})
-			.where(and(eq(schema.media.publicId, publicId), eq(schema.media.uploadedBy, userId)))
+			.where(
+				and(
+					eq(schema.media.publicId, publicId),
+					userId ? eq(schema.media.uploadedBy, userId) : undefined,
+				),
+			)
 			.returning()
 			.then(res => res[0] || null);
 
@@ -97,10 +102,15 @@ export class MediaService extends DrizzleService {
 		return !!updatedMedia;
 	}
 
-	async deleteMedia(userId: number, publicId: string): Promise<MediaDeleteResponseType> {
+	async deleteMedia(publicId: string, userId?: number): Promise<MediaDeleteResponseType> {
 		const deletedMedia = await this.getDb()
 			.delete(schema.media)
-			.where(and(eq(schema.media.publicId, publicId), eq(schema.media.uploadedBy, userId)))
+			.where(
+				and(
+					eq(schema.media.publicId, publicId),
+					userId ? eq(schema.media.uploadedBy, userId) : undefined,
+				),
+			)
 			.returning()
 			.then(res => res[0] || null);
 
