@@ -1,9 +1,9 @@
-name: lenbow
+name: media-library
 
 services:
   postgres:
     image: postgres:latest
-    container_name: lenbow-postgres
+    container_name: media-library-postgres
     restart: on-failure
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
