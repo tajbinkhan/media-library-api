@@ -63,7 +63,7 @@ export class MediaController {
 		file: Express.Multer.File,
 		@Req() request: Request,
 	): Promise<ApiResponse<boolean>> {
-		// await this.mediaService.restrictMediaUpload(Number(request.user?.id));
+		await this.mediaService.restrictMediaUpload(Number(request.user?.id));
 		const result = await this.cloudinaryImageService.uploadFromBuffer(file.buffer);
 
 		const data: MediaDataType = {
