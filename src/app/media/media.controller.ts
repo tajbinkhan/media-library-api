@@ -9,6 +9,7 @@ import {
 	ParseUUIDPipe,
 	Post,
 	Put,
+	Query,
 	Req,
 	UploadedFile,
 	UseGuards,
@@ -24,7 +25,12 @@ import { EnvType } from '../../core/env';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { MediaDataType, MediaResponseType } from './@types/media.types';
 import { FILE_SIZE_LIMIT, singleFileSchema, ZodFileValidationPipe } from './media.pipe';
-import { type MediaDto, mediaSchema } from './media.schema';
+import {
+	type MediaDto,
+	mediaQuerySchema,
+	type MediaQuerySchemaType,
+	mediaSchema,
+} from './media.schema';
 import { MediaService } from './media.service';
 
 @Controller('media')
@@ -57,7 +63,7 @@ export class MediaController {
 		file: Express.Multer.File,
 		@Req() request: Request,
 	): Promise<ApiResponse<boolean>> {
-		await this.mediaService.restrictMediaUpload(Number(request.user?.id));
+		// await this.mediaService.restrictMediaUpload(Number(request.user?.id));
 		const result = await this.cloudinaryImageService.uploadFromBuffer(file.buffer);
 
 		const data: MediaDataType = {
@@ -86,10 +92,25 @@ export class MediaController {
 
 	@UseGuards(JwtAuthGuard)
 	@Get('/')
-	async getAllMedia(@Req() request: Request): Promise<ApiResponse<MediaResponseType[]>> {
-		const mediaItems = await this.mediaService.getAllMedia(Number(request.user?.id));
+	async getAllMedia(
+		@Req() request: Request,
+		@Query() query: MediaQuerySchemaType,
+	): Promise<ApiResponse<MediaResponseType[]>> {
+		const validate = mediaQuerySchema.safeParse(query);
+		if (!validate.success) {
+			throw new BadRequestException(
+				`Validation failed: ${validate.error.issues.map(issue => issue.message).join(', ')}`,
+			);
+		}
 
-		return createApiResponse(HttpStatus.OK, 'Media fetched successfully', mediaItems);
+		const mediaItems = await this.mediaService.getAllMedia(Number(request.user?.id), validate.data);
+
+		return createApiResponse(
+			HttpStatus.OK,
+			'Media fetched successfully',
+			mediaItems.data,
+			mediaItems.pagination,
+		);
 	}
 
 	@UseGuards(JwtAuthGuard)

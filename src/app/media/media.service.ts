@@ -4,13 +4,16 @@ import {
 	NotFoundException,
 	UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq, gte, ilike, lte } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { PaginatedResponse } from '../../core/api-response.interceptor';
+import PaginationManager from '../../core/pagination';
 import { DATABASE_CONNECTION } from '../../database/connection';
+import { orderByColumn } from '../../database/helpers';
 import schema from '../../database/schema';
 import DrizzleService from '../../database/service';
 import { MediaDataType, MediaDeleteResponseType, MediaResponseType } from './@types/media.types';
-import { MediaDto } from './media.schema';
+import { MediaDto, MediaQuerySchemaType } from './media.schema';
 
 @Injectable()
 export class MediaService extends DrizzleService {
@@ -33,8 +36,68 @@ export class MediaService extends DrizzleService {
 		return !!createdMedia;
 	}
 
-	async getAllMedia(userId: number): Promise<MediaResponseType[]> {
-		const mediaItems = await this.getDb()
+	async getAllMedia(
+		userId: number,
+		filter: MediaQuerySchemaType,
+	): Promise<PaginatedResponse<MediaResponseType>> {
+		// Create date objects from string inputs if they exist
+		const fromDate = filter.from ? new Date(filter.from) : undefined;
+		const toDate = filter.to ? new Date(filter.to) : undefined;
+
+		// If toDate exists, set it to the end of the day
+		if (toDate) {
+			toDate.setHours(23, 59, 59, 999);
+		}
+
+		const q = filter.search ? `%${filter.search}%` : undefined;
+
+		/**
+		 * Extended search:
+		 * - Match "other user" in the contact (borrower OR lender), excluding myself
+		 * - Match contact fields (description/publicId/amount/amountPaid)
+		 *
+		 * NOTE: We use casts for UUID/decimal fields so Postgres can ILIKE them.
+		 */
+		const searchExists = filter.search && q ? ilike(schema.media.filename, q) : undefined;
+
+		const conditions = [
+			searchExists,
+			eq(schema.media.uploadedBy, userId),
+			fromDate ? gte(schema.media.createdAt, fromDate) : undefined,
+			toDate ? lte(schema.media.createdAt, toDate) : undefined,
+		].filter(Boolean);
+
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		// Determine pagination parameters
+		let pagination;
+		let offset = 0;
+		let totalItems = 0;
+
+		if (filter.page && filter.limit) {
+			// Get total count for pagination
+			totalItems = await this.getDb()
+				.select({
+					count: count(),
+				})
+				.from(schema.media)
+				.where(whereClause)
+				.then(result => result[0].count);
+
+			const paginationManager = new PaginationManager(filter.page, filter.limit, totalItems);
+			const paginationResult = paginationManager.createPagination();
+			pagination = paginationResult.pagination;
+			offset = paginationResult.offset;
+		}
+
+		const mediaOrderBy = orderByColumn(schema.media, filter.sortBy, filter.sortOrder);
+
+		// Determine which orderBy to use based on which table contains the field
+		const orderBy = mediaOrderBy;
+
+		// Build query with all possible combinations
+
+		const baseSelect = this.getDb()
 			.select({
 				publicId: schema.media.publicId,
 				filename: schema.media.filename,
@@ -50,10 +113,34 @@ export class MediaService extends DrizzleService {
 				updatedAt: schema.media.updatedAt,
 			})
 			.from(schema.media)
-			.where(eq(schema.media.uploadedBy, userId))
-			.orderBy(schema.media.createdAt);
+			.where(whereClause);
 
-		return mediaItems;
+		let rawData;
+		// Handle pagination and ordering
+		if (filter.page && filter.limit) {
+			// Paginated query
+			if (offset && orderBy) {
+				rawData = await baseSelect.limit(filter.limit).offset(offset).orderBy(orderBy);
+			} else if (offset) {
+				rawData = await baseSelect.limit(filter.limit).offset(offset);
+			} else if (orderBy) {
+				rawData = await baseSelect.limit(filter.limit).orderBy(orderBy);
+			} else {
+				rawData = await baseSelect.limit(filter.limit);
+			}
+		} else {
+			// Non-paginated query
+			if (orderBy) {
+				rawData = await baseSelect.orderBy(orderBy);
+			} else {
+				rawData = await baseSelect;
+			}
+		}
+
+		return {
+			data: rawData,
+			pagination,
+		};
 	}
 
 	async getMediaByPublicId(userId: number, publicId: string): Promise<MediaResponseType> {
